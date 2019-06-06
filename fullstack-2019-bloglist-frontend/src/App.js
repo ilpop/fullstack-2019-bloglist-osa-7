@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 
 import blogService from './services/blogs'
 import loginService from './services/login'
@@ -13,11 +13,10 @@ import { removeNotification,
   createErrorNotification,
   createSuccessNotification } from './reducers/NotificationReducer'
 import { setBlogs } from './reducers/BlogReducer'
+import { setUser } from './reducers/UserReducer'
 
 
 const App = ({ store }) => {
-  // app state
-  const [user, setUser] = useState(null)
   // form fields
   const usernameField = useField('text')
   const passwordField = useField('password')
@@ -42,12 +41,15 @@ const App = ({ store }) => {
 
   useEffect(() => {
     const loggedUserJSON = window.localStorage.getItem(LOCAL_STORAGE_USER_KEY)
+
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
-      setUser(user)
+
+      store.dispatch(setUser(user))
       blogService.setToken(user.token)
     }
   }, []) // executed only on first render []
+
 
   const handleLogin = async (event) => {
     event.preventDefault()
@@ -61,7 +63,7 @@ const App = ({ store }) => {
       window.localStorage.setItem(
         LOCAL_STORAGE_USER_KEY, JSON.stringify(user)
       )
-      setUser(user)
+      store.dispatch(setUser(user))
       usernameField.reset('')
       passwordField.reset('')
     } catch (exception) {
@@ -75,7 +77,7 @@ const App = ({ store }) => {
   const handleLogout = async (event) => {
     event.preventDefault()
     window.localStorage.removeItem(LOCAL_STORAGE_USER_KEY)
-    setUser(null)
+    store.dispatch(setUser(null))
   }
 
   const handleCreate = async (event) => {
@@ -159,14 +161,14 @@ const App = ({ store }) => {
     <div>
       <h1>blogs</h1>
       <Notification notification={store.getState().notification} />
-      {user === null ?
+      {store.getState().user === null ?
         <LoginForm
           passwordField={passwordField}
           usernameField={usernameField}
           handleLogin={handleLogin}
         /> :
         <div>
-          <p>{user.name} logged in</p>
+          <p>{store.getState().user.name} logged in</p>
           <LogoutForm handleLogout={handleLogout}/>
           <Toggable buttonLabel={BUTTON_LABEL_ADD_BLOG} ref={saveBlogFormRef}>
             <AddBlogForm
@@ -176,7 +178,10 @@ const App = ({ store }) => {
               handleCreate={handleCreate}
             />
           </Toggable>
-          <BlogList blogs={store.getState().blogs} likeHandler={addLike} deleteHandler={removeBlog} user={user}/>
+          <BlogList blogs={store.getState().blogs}
+            likeHandler={addLike}
+            deleteHandler={removeBlog}
+            user={store.getState().user}/>
         </div>}
     </div>
   )

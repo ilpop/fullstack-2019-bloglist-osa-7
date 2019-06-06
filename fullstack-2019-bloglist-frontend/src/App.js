@@ -11,12 +11,12 @@ import Toggable from './components/Toggable'
 import  { useField } from './hooks'
 import { removeNotification,
   createErrorNotification,
-  createSuccessNotification } from './store'
+  createSuccessNotification } from './reducers/NotificationReducer'
+import { setBlogs } from './reducers/BlogReducer'
 
 
 const App = ({ store }) => {
   // app state
-  const [blogs, setBlogs] = useState([])
   const [user, setUser] = useState(null)
   // form fields
   const usernameField = useField('text')
@@ -39,11 +39,6 @@ const App = ({ store }) => {
   // https://reactjs.org/docs/refs-and-the-dom.html
   const saveBlogFormRef = React.createRef()
 
-  useEffect(() => {
-    blogService.getAll().then(blogs =>
-      setBlogs( blogs )
-    )
-  }, [])  // executed only on first render []
 
   useEffect(() => {
     const loggedUserJSON = window.localStorage.getItem(LOCAL_STORAGE_USER_KEY)
@@ -99,7 +94,7 @@ const App = ({ store }) => {
       titleField.reset('')
       urlField.reset('')
       authorField.reset('')
-      setBlogs(blogs.concat(response))
+      store.dispatch(setBlogs(store.getState().blogs.concat(response)))
 
       store.dispatch(createSuccessNotification(
         `a new blog ${response.title} by ${response.author} added`))
@@ -128,7 +123,8 @@ const App = ({ store }) => {
         likes: blog.likes + 1
       })
 
-      setBlogs(blogs.map(blog => blog.id !== id ? blog : response))
+      store.dispatch(setBlogs(store.getState().blogs.map(
+        blog => blog.id !== id ? blog : response)))
       store.dispatch(createSuccessNotification(
         `blog ${response.title} was updated`))
       setTimeout(() => {
@@ -148,7 +144,7 @@ const App = ({ store }) => {
         const response = await blogService.deleteBlog(id)
         if(response.status === 204){
           const blogs = await blogService.getAll()
-          setBlogs(blogs)
+          store.dispatch(setBlogs(blogs))
         }
       } catch (exception) {
         store.dispatch(createErrorNotification(ERROR_MSG_REMOVE_BLOG))
@@ -162,7 +158,7 @@ const App = ({ store }) => {
   return (
     <div>
       <h1>blogs</h1>
-      <Notification notification={store.getState()} />
+      <Notification notification={store.getState().notification} />
       {user === null ?
         <LoginForm
           passwordField={passwordField}
@@ -180,7 +176,7 @@ const App = ({ store }) => {
               handleCreate={handleCreate}
             />
           </Toggable>
-          <BlogList blogs={blogs} likeHandler={addLike} deleteHandler={removeBlog} user={user}/>
+          <BlogList blogs={store.getState().blogs} likeHandler={addLike} deleteHandler={removeBlog} user={user}/>
         </div>}
     </div>
   )

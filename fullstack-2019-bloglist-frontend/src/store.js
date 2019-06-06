@@ -1,44 +1,13 @@
-import { createStore } from 'redux'
 
-// action creators
-export const createErrorNotification = (content) => {
-  return {
-    type: 'NEW_NOTIFICATION',
-    data: {
-      message: content,
-      type: 'error'
-    }
-  }
-}
+import { createStore, combineReducers } from 'redux'
+import blogReducer from './reducers/BlogReducer'
+import notificationReducer from './reducers/NotificationReducer'
 
-export const createSuccessNotification = (content) => {
-  return {
-    type: 'NEW_NOTIFICATION',
-    data: {
-      message: content,
-      type: 'success'
-    }
-  }
-}
+const reducer = combineReducers({
+  blogs: blogReducer,
+  notification: notificationReducer
+})
 
-export const removeNotification = () => {
-  return {
-    type: 'REMOVE_NOTIFICATION',
-    data: null
-  }
-}
-
-// the reducer function
-const notificationReducer = (state = null, action) => {
-  if (action.type === 'NEW_NOTIFICATION') {
-    return action.data
-  }
-  if (action.type === 'REMOVE_NOTIFICATION') {
-    return null
-  }
-  return state
-}
-
-const store = createStore(notificationReducer)
+const store = createStore(reducer)
 
 export default store

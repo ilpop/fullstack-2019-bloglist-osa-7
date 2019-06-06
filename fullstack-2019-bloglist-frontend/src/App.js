@@ -2,23 +2,22 @@ import React, { useState, useEffect } from 'react'
 
 import blogService from './services/blogs'
 import loginService from './services/login'
-
-import ErrorNotification from './components/ErrorNotification'
-import SuccessNotification from './components/SuccessNotification'
+import Notification from './components/Notification'
 import AddBlogForm from './components/SaveBlogForm'
 import LoginForm from './components/LoginForm'
 import LogoutForm from './components/LogoutForm'
 import BlogList from './components/BlogList/BlogList'
 import Toggable from './components/Toggable'
 import  { useField } from './hooks'
+import { removeNotification,
+  createErrorNotification,
+  createSuccessNotification } from './store'
 
 
-const App = () => {
+const App = ({ store }) => {
   // app state
   const [blogs, setBlogs] = useState([])
   const [user, setUser] = useState(null)
-  const [errorMessage, setErrorMessage] = useState(null)
-  const [successMessage, setSuccessMessage] = useState(null)
   // form fields
   const usernameField = useField('text')
   const passwordField = useField('password')
@@ -55,7 +54,6 @@ const App = () => {
     }
   }, []) // executed only on first render []
 
-
   const handleLogin = async (event) => {
     event.preventDefault()
     const username = usernameField.value
@@ -72,10 +70,10 @@ const App = () => {
       usernameField.reset('')
       passwordField.reset('')
     } catch (exception) {
-      setErrorMessage(ERROR_MSG_LOGIN)
+      store.dispatch(createErrorNotification(ERROR_MSG_LOGIN))
       setTimeout(() => {
-        setErrorMessage(null)
-      }, 5000)
+        store.dispatch(removeNotification())
+      }, 3000)
     }
   }
 
@@ -102,17 +100,20 @@ const App = () => {
       urlField.reset('')
       authorField.reset('')
       setBlogs(blogs.concat(response))
-      setSuccessMessage(`a new blog ${response.title} by ${response.author} added`)
+
+      store.dispatch(createSuccessNotification(
+        `a new blog ${response.title} by ${response.author} added`))
       setTimeout(() => {
-        setSuccessMessage(null)
+        store.dispatch(removeNotification())
       }, 3000)
     }catch (exception) {
-      setErrorMessage(ERROR_MSG_CREATE_BLOG)
+      store.dispatch(createErrorNotification(ERROR_MSG_CREATE_BLOG))
       setTimeout(() => {
-        setErrorMessage(null)
+        store.dispatch(removeNotification())
       }, 3000)
     }
   }
+
 
   const addLike = async (blog) => {
     const id = blog.id
@@ -128,19 +129,20 @@ const App = () => {
       })
 
       setBlogs(blogs.map(blog => blog.id !== id ? blog : response))
-      // setSuccessMessage(`blog ${response.title} was updated`)
-      // setTimeout(() => {
-      //   setSuccessMessage(null)
-      // }, 3000)
-    } catch (exception) {
-      setErrorMessage(ERROR_MSG_UPDATE_BLOG)
+      store.dispatch(createSuccessNotification(
+        `blog ${response.title} was updated`))
       setTimeout(() => {
-        setErrorMessage(null)
+        store.dispatch(removeNotification())
+      }, 3000)
+    } catch (exception) {
+      store.dispatch(createErrorNotification(ERROR_MSG_UPDATE_BLOG))
+      setTimeout(() => {
+        store.dispatch(removeNotification())
       }, 3000)
     }
   }
 
-  const remoteBlog = async (id) => {
+  const removeBlog = async (id) => {
     if (window.confirm(CONFIRMATION_MSG_REMOVE_BLOG)) {
       try {
         const response = await blogService.deleteBlog(id)
@@ -149,9 +151,9 @@ const App = () => {
           setBlogs(blogs)
         }
       } catch (exception) {
-        setErrorMessage(ERROR_MSG_REMOVE_BLOG)
+        store.dispatch(createErrorNotification(ERROR_MSG_REMOVE_BLOG))
         setTimeout(() => {
-          setErrorMessage(null)
+          store.dispatch(removeNotification())
         }, 3000)
       }
     }
@@ -159,9 +161,8 @@ const App = () => {
 
   return (
     <div>
-      <ErrorNotification message={errorMessage} />
-      <SuccessNotification message={successMessage} />
       <h1>blogs</h1>
+      <Notification notification={store.getState()} />
       {user === null ?
         <LoginForm
           passwordField={passwordField}
@@ -179,7 +180,7 @@ const App = () => {
               handleCreate={handleCreate}
             />
           </Toggable>
-          <BlogList blogs={blogs} likeHandler={addLike} deleteHandler={remoteBlog} user={user}/>
+          <BlogList blogs={blogs} likeHandler={addLike} deleteHandler={removeBlog} user={user}/>
         </div>}
     </div>
   )

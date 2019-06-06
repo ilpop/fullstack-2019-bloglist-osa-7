@@ -1,0 +1,9 @@
+PUT http://localhost:3003/api/blogs/PUT_ID_HERE
+content-type: application/json
+
+{
+    "likes": "200",
+    "url": "updated url",
+    "title": "updated title",
+    "author": "Jon Clash"
+}

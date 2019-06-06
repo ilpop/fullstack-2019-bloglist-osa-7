@@ -1,0 +1,10 @@
+POST http://localhost:3003/api/blogs
+content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImphZ2dlcnMiLCJpZCI6IjVjZDg0NTM3MThmNzUyMzFhOWY5NzU5NCIsImlhdCI6MTU1NzY3ODU1Mn0.9IJyNHIhZihzhie0s9B5U5ZCr4r3j-ZP2zI1MP7jyeI
+
+{
+  "title": "Services are Not a Silver Bullet",
+  "author": "Josh Clayton",
+  "url": "https://thoughtbot.com/blog/services-are-not-a-silver-bullet",
+  "likes": 0
+}

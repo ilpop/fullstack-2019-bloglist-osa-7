@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { connect } from 'react-redux'
 
 import blogService from './services/blogs'
 import loginService from './services/login'
@@ -16,13 +17,16 @@ import { setBlogs } from './reducers/BlogReducer'
 import { setUser } from './reducers/UserReducer'
 
 
-const App = ({ store }) => {
+const App = (props) => {
+
   // form fields
   const usernameField = useField('text')
   const passwordField = useField('password')
+  // create blog form fields in react state
   const titleField = useField('text')
   const urlField = useField('text')
   const authorField = useField('text')
+
   // misc variables
   const LOCAL_STORAGE_USER_KEY = 'loggedBlogAppUser'
   // texts
@@ -45,7 +49,7 @@ const App = ({ store }) => {
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
 
-      store.dispatch(setUser(user))
+      props.setUser(user)
       blogService.setToken(user.token)
     }
   }, []) // executed only on first render []
@@ -63,13 +67,13 @@ const App = ({ store }) => {
       window.localStorage.setItem(
         LOCAL_STORAGE_USER_KEY, JSON.stringify(user)
       )
-      store.dispatch(setUser(user))
+      props.setUser(user)
       usernameField.reset('')
       passwordField.reset('')
     } catch (exception) {
-      store.dispatch(createErrorNotification(ERROR_MSG_LOGIN))
+      props.createErrorNotification(ERROR_MSG_LOGIN)
       setTimeout(() => {
-        store.dispatch(removeNotification())
+        props.removeNotification()
       }, 3000)
     }
   }
@@ -77,7 +81,7 @@ const App = ({ store }) => {
   const handleLogout = async (event) => {
     event.preventDefault()
     window.localStorage.removeItem(LOCAL_STORAGE_USER_KEY)
-    store.dispatch(setUser(null))
+    props.setUser(null)
   }
 
   const handleCreate = async (event) => {
@@ -96,17 +100,17 @@ const App = ({ store }) => {
       titleField.reset('')
       urlField.reset('')
       authorField.reset('')
-      store.dispatch(setBlogs(store.getState().blogs.concat(response)))
+      props.setBlogs(props.blogs.concat(response))
 
-      store.dispatch(createSuccessNotification(
-        `a new blog ${response.title} by ${response.author} added`))
+      props.createSuccessNotification(
+        `a new blog ${response.title} by ${response.author} added`)
       setTimeout(() => {
-        store.dispatch(removeNotification())
+        props.removeNotification()
       }, 3000)
     }catch (exception) {
-      store.dispatch(createErrorNotification(ERROR_MSG_CREATE_BLOG))
+      props.createErrorNotification(ERROR_MSG_CREATE_BLOG)
       setTimeout(() => {
-        store.dispatch(removeNotification())
+        props.removeNotification()
       }, 3000)
     }
   }
@@ -125,17 +129,17 @@ const App = ({ store }) => {
         likes: blog.likes + 1
       })
 
-      store.dispatch(setBlogs(store.getState().blogs.map(
-        blog => blog.id !== id ? blog : response)))
-      store.dispatch(createSuccessNotification(
-        `blog ${response.title} was updated`))
+      props.setBlogs(props.blogs.map(
+        blog => blog.id !== id ? blog : response))
+      props.createSuccessNotification(
+        `blog ${response.title} was updated`)
       setTimeout(() => {
-        store.dispatch(removeNotification())
+        props.removeNotification()
       }, 3000)
     } catch (exception) {
-      store.dispatch(createErrorNotification(ERROR_MSG_UPDATE_BLOG))
+      props.createErrorNotification(ERROR_MSG_UPDATE_BLOG)
       setTimeout(() => {
-        store.dispatch(removeNotification())
+        props.removeNotification()
       }, 3000)
     }
   }
@@ -146,12 +150,12 @@ const App = ({ store }) => {
         const response = await blogService.deleteBlog(id)
         if(response.status === 204){
           const blogs = await blogService.getAll()
-          store.dispatch(setBlogs(blogs))
+          props.setBlogs(blogs)
         }
       } catch (exception) {
-        store.dispatch(createErrorNotification(ERROR_MSG_REMOVE_BLOG))
+        props.createErrorNotification(ERROR_MSG_REMOVE_BLOG)
         setTimeout(() => {
-          store.dispatch(removeNotification())
+          props.removeNotification()
         }, 3000)
       }
     }
@@ -160,15 +164,15 @@ const App = ({ store }) => {
   return (
     <div>
       <h1>blogs</h1>
-      <Notification notification={store.getState().notification} />
-      {store.getState().user === null ?
+      <Notification />
+      {props.user === null ?
         <LoginForm
           passwordField={passwordField}
           usernameField={usernameField}
           handleLogin={handleLogin}
         /> :
         <div>
-          <p>{store.getState().user.name} logged in</p>
+          <p>{props.user.name} logged in</p>
           <LogoutForm handleLogout={handleLogout}/>
           <Toggable buttonLabel={BUTTON_LABEL_ADD_BLOG} ref={saveBlogFormRef}>
             <AddBlogForm
@@ -178,13 +182,27 @@ const App = ({ store }) => {
               handleCreate={handleCreate}
             />
           </Toggable>
-          <BlogList blogs={store.getState().blogs}
-            likeHandler={addLike}
-            deleteHandler={removeBlog}
-            user={store.getState().user}/>
+          <BlogList likeHandler={addLike} deleteHandler={removeBlog}/>
         </div>}
     </div>
   )
 }
 
-export default App
+const mapStateToProps = (state) => {
+  return {
+    blogs: state.blogs,
+    notification: state.notification,
+    user: state.user
+  }
+}
+
+const mapDispatchToProps = {
+  setUser,
+  createErrorNotification,
+  createSuccessNotification,
+  removeNotification,
+  setBlogs
+}
+
+const ConnectedApp = connect(mapStateToProps, mapDispatchToProps)(App)
+export default ConnectedApp

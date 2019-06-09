@@ -1,4 +1,5 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import Blog from '../Blog/Blog'
 
@@ -35,5 +36,16 @@ BlogList.propTypes = {
   blogs: PropTypes.array.isRequired,
 }
 
-export default BlogList
+// export default BlogList
+
+
+const mapStateToProps = (state) => {
+  return {
+    blogs: state.blogs,
+    user: state.user
+  }
+}
+
+const ConnectedBlogList = connect(mapStateToProps)(BlogList)
+export default ConnectedBlogList
 

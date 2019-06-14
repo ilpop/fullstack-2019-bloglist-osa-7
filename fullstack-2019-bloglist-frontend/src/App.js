@@ -1,208 +1,137 @@
-import React, { useEffect } from 'react'
-import { connect } from 'react-redux'
-
+import React, { useState, useEffect } from 'react'
+import Blog from './components/Blog'
 import blogService from './services/blogs'
 import loginService from './services/login'
+import NewBlog from './components/NewBlog'
 import Notification from './components/Notification'
-import AddBlogForm from './components/SaveBlogForm'
-import LoginForm from './components/LoginForm'
-import LogoutForm from './components/LogoutForm'
-import BlogList from './components/BlogList/BlogList'
-import Toggable from './components/Toggable'
-import  { useField } from './hooks'
-import { removeNotification,
-  createErrorNotification,
-  createSuccessNotification } from './reducers/NotificationReducer'
-import { setBlogs } from './reducers/BlogReducer'
-import { setUser } from './reducers/UserReducer'
+import Togglable from './components/Toggable'
+import { useField } from './hooks'
 
-
-const App = (props) => {
-
-  // form fields
-  const usernameField = useField('text')
-  const passwordField = useField('password')
-  // create blog form fields in react state
-  const titleField = useField('text')
-  const urlField = useField('text')
-  const authorField = useField('text')
-
-  // misc variables
-  const LOCAL_STORAGE_USER_KEY = 'loggedBlogAppUser'
-  // texts
-  const ERROR_MSG_LOGIN = 'käyttäjätunnus tai salasana virheellinen'
-  const ERROR_MSG_CREATE_BLOG = 'failed to create blog link'
-  const ERROR_MSG_UPDATE_BLOG = 'failed to update blog link'
-  const ERROR_MSG_REMOVE_BLOG = 'failed to remove blog'
-  const BUTTON_LABEL_ADD_BLOG = 'add blog'
-  const CONFIRMATION_MSG_REMOVE_BLOG = 'Do you really want to remove blog?'
-
-
-  // ref haxx
-  // https://reactjs.org/docs/refs-and-the-dom.html
-  const saveBlogFormRef = React.createRef()
-
+const App = () => {
+  const [username] = useField('text')
+  const [password] = useField('password')
+  const [blogs, setBlogs] = useState([])
+  const [user, setUser] = useState(null)
+  const [notification, setNotification] = useState({
+    message: null
+  })
 
   useEffect(() => {
-    const loggedUserJSON = window.localStorage.getItem(LOCAL_STORAGE_USER_KEY)
+    blogService.getAll().then(blogs => {
+      setBlogs(blogs)
+    })
+  }, [])
 
+  useEffect(() => {
+    const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser')
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
-
-      props.setUser(user)
+      setUser(user)
       blogService.setToken(user.token)
     }
-  }, []) // executed only on first render []
+  }, [])
 
+  const notify = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification({ message: null }), 10000)
+  }
 
   const handleLogin = async (event) => {
     event.preventDefault()
-    const username = usernameField.value
-    const password = passwordField.value
-
     try {
       const user = await loginService.login({
-        username, password,
+        username: username.value,
+        password: password.value
       })
-      window.localStorage.setItem(
-        LOCAL_STORAGE_USER_KEY, JSON.stringify(user)
-      )
-      props.setUser(user)
-      usernameField.reset('')
-      passwordField.reset('')
+
+      window.localStorage.setItem('loggedBlogAppUser', JSON.stringify(user))
+      blogService.setToken(user.token)
+      setUser(user)
     } catch (exception) {
-      props.createErrorNotification(ERROR_MSG_LOGIN)
-      setTimeout(() => {
-        props.removeNotification()
-      }, 3000)
+      notify('wrong username of password', 'error')
     }
   }
 
-  const handleLogout = async (event) => {
-    event.preventDefault()
-    window.localStorage.removeItem(LOCAL_STORAGE_USER_KEY)
-    props.setUser(null)
+  const handleLogout = () => {
+    setUser(null)
+    blogService.destroyToken()
+    window.localStorage.removeItem('loggedBlogAppUser')
   }
 
-  const handleCreate = async (event) => {
-    event.preventDefault()
-    // ref haxx
-    // https://reactjs.org/docs/refs-and-the-dom.html
-    saveBlogFormRef.current.toggleVisibility()
+  const createBlog = async (blog) => {
+    const createdBlog = await blogService.create(blog)
+    newBlogRef.current.toggleVisibility()
+    setBlogs(blogs.concat(createdBlog))
+    notify(`a new blog ${createdBlog.title} by ${createdBlog.author} added`)
+  }
 
-    try {
-      const response = await blogService.create({
-        title: titleField.value,
-        url: urlField.value,
-        author: authorField.value,
-        likes: 0
-      })
-      titleField.reset('')
-      urlField.reset('')
-      authorField.reset('')
-      props.setBlogs(props.blogs.concat(response))
+  const likeBlog = async (blog) => {
+    const likedBlog = { ...blog, likes: blog.likes + 1 }
+    const updatedBlog = await blogService.update(likedBlog)
+    setBlogs(blogs.map(b => b.id === blog.id ? updatedBlog : b))
+    notify(`blog ${updatedBlog.title} by ${updatedBlog.author} liked!`)
+  }
 
-      props.createSuccessNotification(
-        `a new blog ${response.title} by ${response.author} added`)
-      setTimeout(() => {
-        props.removeNotification()
-      }, 3000)
-    }catch (exception) {
-      props.createErrorNotification(ERROR_MSG_CREATE_BLOG)
-      setTimeout(() => {
-        props.removeNotification()
-      }, 3000)
+  const removeBlog = async (blog) => {
+    const ok = window.confirm(`remove blog ${blog.title} by ${blog.author}`)
+    if (ok) {
+      const updatedBlog = await blogService.remove(blog)
+      setBlogs(blogs.filter(b => b.id !== blog.id))
+      notify(`blog ${updatedBlog.title} by ${updatedBlog.author} removed!`)
     }
   }
 
+  if (user === null) {
+    return (
+      <div>
+        <h2>log in to application</h2>
 
-  const addLike = async (blog) => {
-    const id = blog.id
+        <Notification notification={notification} />
 
-    try {
-      const response = await blogService.update({
-        id: blog.id,
-        title: blog.title,
-        url: blog.url,
-        author: blog.author,
-        user: blog.user,
-        likes: blog.likes + 1
-      })
-
-      props.setBlogs(props.blogs.map(
-        blog => blog.id !== id ? blog : response))
-      props.createSuccessNotification(
-        `blog ${response.title} was updated`)
-      setTimeout(() => {
-        props.removeNotification()
-      }, 3000)
-    } catch (exception) {
-      props.createErrorNotification(ERROR_MSG_UPDATE_BLOG)
-      setTimeout(() => {
-        props.removeNotification()
-      }, 3000)
-    }
+        <form onSubmit={handleLogin}>
+          <div>
+            käyttäjätunnus
+            <input {...username}/>
+          </div>
+          <div>
+            salasana
+            <input {...password} />
+          </div>
+          <button type="submit">kirjaudu</button>
+        </form>
+      </div>
+    )
   }
 
-  const removeBlog = async (id) => {
-    if (window.confirm(CONFIRMATION_MSG_REMOVE_BLOG)) {
-      try {
-        const response = await blogService.deleteBlog(id)
-        if(response.status === 204){
-          const blogs = await blogService.getAll()
-          props.setBlogs(blogs)
-        }
-      } catch (exception) {
-        props.createErrorNotification(ERROR_MSG_REMOVE_BLOG)
-        setTimeout(() => {
-          props.removeNotification()
-        }, 3000)
-      }
-    }
-  }
+  const newBlogRef = React.createRef()
+
+  const byLikes = (b1, b2) => b2.likes - b1.likes
 
   return (
     <div>
-      <h1>blogs</h1>
-      <Notification />
-      {props.user === null ?
-        <LoginForm
-          passwordField={passwordField}
-          usernameField={usernameField}
-          handleLogin={handleLogin}
-        /> :
-        <div>
-          <p>{props.user.name} logged in</p>
-          <LogoutForm handleLogout={handleLogout}/>
-          <Toggable buttonLabel={BUTTON_LABEL_ADD_BLOG} ref={saveBlogFormRef}>
-            <AddBlogForm
-              titleField = {titleField}
-              urlField = {urlField}
-              authorField ={authorField}
-              handleCreate={handleCreate}
-            />
-          </Toggable>
-          <BlogList likeHandler={addLike} deleteHandler={removeBlog}/>
-        </div>}
+      <h2>blogs</h2>
+
+      <Notification notification={notification} />
+
+      <p>{user.name} logged in</p>
+      <button onClick={handleLogout}>logout</button>
+
+      <Togglable buttonLabel='create new' ref={newBlogRef}>
+        <NewBlog createBlog={createBlog} />
+      </Togglable>
+
+      {blogs.sort(byLikes).map(blog =>
+        <Blog
+          key={blog.id}
+          blog={blog}
+          like={likeBlog}
+          remove={removeBlog}
+          user={user}
+          creator={blog.user.username === user.username}
+        />
+      )}
     </div>
   )
 }
 
-const mapStateToProps = (state) => {
-  return {
-    blogs: state.blogs,
-    notification: state.notification,
-    user: state.user
-  }
-}
-
-const mapDispatchToProps = {
-  setUser,
-  createErrorNotification,
-  createSuccessNotification,
-  removeNotification,
-  setBlogs
-}
-
-const ConnectedApp = connect(mapStateToProps, mapDispatchToProps)(App)
-export default ConnectedApp
+export default App

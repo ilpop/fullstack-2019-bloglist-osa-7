@@ -1,9 +1,6 @@
 import React, { useState, useImperativeHandle } from 'react'
 
-
-// eslint-disable-next-line react/display-name
-const Togglable = React.forwardRef ( (props, ref) => {
-  // toggablen oma tila
+const Togglable = React.forwardRef((props, ref) => {
   const [visible, setVisible] = useState(false)
 
   const hideWhenVisible = { display: visible ? 'none' : '' }
@@ -13,7 +10,6 @@ const Togglable = React.forwardRef ( (props, ref) => {
     setVisible(!visible)
   }
 
-  // make toggleVisibility "public", visible to the outside world using ref
   useImperativeHandle(ref, () => {
     return {
       toggleVisibility
@@ -23,18 +19,16 @@ const Togglable = React.forwardRef ( (props, ref) => {
   return (
     <div>
       <div style={hideWhenVisible}>
-        <button onClick={toggleVisibility}>{props.buttonLabel}</button>
+        <button onClick={toggleVisibility}>
+          {props.buttonLabel}
+        </button>
       </div>
       <div style={showWhenVisible}>
-        {/* "Toisin kuin "normaalit" propsit, children on Reactin
-            automaattisesti määrittelemä, aina olemassa oleva propsi" */}
         {props.children}
         <button onClick={toggleVisibility}>cancel</button>
       </div>
     </div>
   )
-}
-)
-
+})
 
 export default Togglable

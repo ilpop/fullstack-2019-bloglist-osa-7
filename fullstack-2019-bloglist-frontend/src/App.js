@@ -7,14 +7,11 @@ import Notification from './components/Notification'
 import Togglable from './components/Toggable'
 import { useField } from './hooks'
 
-const App = () => {
+const App = ({ store }) => {
   const [username] = useField('text')
   const [password] = useField('password')
   const [blogs, setBlogs] = useState([])
   const [user, setUser] = useState(null)
-  const [notification, setNotification] = useState({
-    message: null
-  })
 
   useEffect(() => {
     blogService.getAll().then(blogs => {
@@ -32,8 +29,26 @@ const App = () => {
   }, [])
 
   const notify = (message, type = 'success') => {
-    setNotification({ message, type })
-    setTimeout(() => setNotification({ message: null }), 10000)
+
+    const newNotificationAction = (message, type) => {
+      return {
+        type: 'NEW_NOTIFICATION',
+        data: {
+          message,
+          type
+        }
+      }
+    }
+    const removeNotificationAction = () => {
+      return {
+        type: 'REMOVE_NOTIFICATION',
+        data: {
+          message: null
+        }
+      }
+    }
+    store.dispatch(newNotificationAction(message, type))
+    setTimeout(() => store.dispatch(removeNotificationAction()), 10000)
   }
 
   const handleLogin = async (event) => {
@@ -86,7 +101,7 @@ const App = () => {
       <div>
         <h2>log in to application</h2>
 
-        <Notification notification={notification} />
+        <Notification notification={store.getState()} />
 
         <form onSubmit={handleLogin}>
           <div>
@@ -111,7 +126,7 @@ const App = () => {
     <div>
       <h2>blogs</h2>
 
-      <Notification notification={notification} />
+      <Notification notification={store.getState()} />
 
       <p>{user.name} logged in</p>
       <button onClick={handleLogout}>logout</button>

@@ -23,7 +23,6 @@ blogRouter.get('/', async (request, response, next) => {
 })
 
 blogRouter.post('/', async (request, response, next) => {
-  const body = request.body
   const token = request.token
 
   try{
@@ -35,16 +34,20 @@ blogRouter.post('/', async (request, response, next) => {
     }
     const user = await User.findById(decodedToken.id)
 
-    const blog = new Blog({
-      title: body.title,
-      url: body.url,
-      author: body.author,
-      likes: body.likes,
-      user: user._id
-    })
+    const blog = new Blog(request.body)
+    console.log('blog', blog)
+    blog.user = user
+
+    // const blog = new Blog({
+    //   title: body.title,
+    //   url: body.url,
+    //   author: body.author,
+    //   likes: body.likes,
+    //   user: user._id
+    // })
 
     const savedBlog = await blog.save()
-    user.blogs = user.blogs.concat(savedBlog._id)
+    user.blogs = user.blogs.concat(savedBlog)
     await user.save()
     response.status(201).json(savedBlog.toJSON())
   } catch(exception) {
@@ -92,6 +95,7 @@ blogRouter.put('/:id', async (req, res, next) => {
 
     const result = await Blog.findByIdAndUpdate(
       req.params.id, blog, { new: true })
+      .populate('user', { username: 1, name: 1 })
     res.json(result.toJSON())
   }catch(exception) {
     next(exception)

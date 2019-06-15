@@ -10,12 +10,38 @@ import { useField } from './hooks'
 const App = ({ store }) => {
   const [username] = useField('text')
   const [password] = useField('password')
-  const [blogs, setBlogs] = useState([])
   const [user, setUser] = useState(null)
+
+
+  const initBlogsAction = (blogs) => {
+    console.log('INIT', blogs)
+
+    return {
+      type: 'INIT_BLOGS',
+      data: blogs
+    }
+  }
+
+  const addBlogAction = (blog) => {
+    console.log('ADD', blog)
+
+    return {
+      type: 'ADD_BLOG',
+      data: blog
+    }
+  }
+
+  const likeBlogAction = (blog) => {
+    return {
+      type: 'LIKE_BLOG',
+      data: blog
+    }
+  }
+
 
   useEffect(() => {
     blogService.getAll().then(blogs => {
-      setBlogs(blogs)
+      store.dispatch(initBlogsAction(blogs))
     })
   }, [])
 
@@ -39,6 +65,7 @@ const App = ({ store }) => {
         }
       }
     }
+
     const removeNotificationAction = () => {
       return {
         type: 'REMOVE_NOTIFICATION',
@@ -47,6 +74,7 @@ const App = ({ store }) => {
         }
       }
     }
+
     store.dispatch(newNotificationAction(message, type))
     setTimeout(() => store.dispatch(removeNotificationAction()), 10000)
   }
@@ -74,25 +102,30 @@ const App = ({ store }) => {
   }
 
   const createBlog = async (blog) => {
-    const createdBlog = await blogService.create(blog)
+    const addedBlog = await blogService.create(blog)
+
     newBlogRef.current.toggleVisibility()
-    setBlogs(blogs.concat(createdBlog))
-    notify(`a new blog ${createdBlog.title} by ${createdBlog.author} added`)
+    store.dispatch(addBlogAction(addedBlog))
+
+    notify(`a new blog ${addedBlog.title} by ${addedBlog.author} added`)
   }
 
   const likeBlog = async (blog) => {
     const likedBlog = { ...blog, likes: blog.likes + 1 }
     const updatedBlog = await blogService.update(likedBlog)
-    setBlogs(blogs.map(b => b.id === blog.id ? updatedBlog : b))
+    store.dispatch(likeBlogAction(updatedBlog))
     notify(`blog ${updatedBlog.title} by ${updatedBlog.author} liked!`)
   }
 
   const removeBlog = async (blog) => {
-    const ok = window.confirm(`remove blog ${blog.title} by ${blog.author}`)
+    const title = blog.title
+    const author = blog.author
+    const ok = window.confirm(`remove blog ${title} by ${author}`)
     if (ok) {
-      const updatedBlog = await blogService.remove(blog)
-      setBlogs(blogs.filter(b => b.id !== blog.id))
-      notify(`blog ${updatedBlog.title} by ${updatedBlog.author} removed!`)
+      await blogService.remove(blog)
+      const blogs = store.getState().blogs
+      store.dispatch(initBlogsAction(blogs.filter(b => b.id !== blog.id)))
+      notify(`blog ${title} by ${author} removed!`)
     }
   }
 
@@ -101,7 +134,7 @@ const App = ({ store }) => {
       <div>
         <h2>log in to application</h2>
 
-        <Notification notification={store.getState()} />
+        <Notification notification={store.getState().notification} />
 
         <form onSubmit={handleLogin}>
           <div>
@@ -126,7 +159,7 @@ const App = ({ store }) => {
     <div>
       <h2>blogs</h2>
 
-      <Notification notification={store.getState()} />
+      <Notification notification={store.getState().notification} />
 
       <p>{user.name} logged in</p>
       <button onClick={handleLogout}>logout</button>
@@ -135,14 +168,13 @@ const App = ({ store }) => {
         <NewBlog createBlog={createBlog} />
       </Togglable>
 
-      {blogs.sort(byLikes).map(blog =>
+      {store.getState().blogs.sort(byLikes).map(blog =>
         <Blog
           key={blog.id}
           blog={blog}
           like={likeBlog}
           remove={removeBlog}
           user={user}
-          creator={blog.user.username === user.username}
         />
       )}
     </div>

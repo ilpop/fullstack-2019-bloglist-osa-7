@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import Blog from './components/Blog'
 import blogService from './services/blogs'
 import loginService from './services/login'
@@ -6,16 +6,15 @@ import NewBlog from './components/NewBlog'
 import Notification from './components/Notification'
 import Togglable from './components/Toggable'
 import { useField } from './hooks'
+import { setUserAction, removeUserAction } from './reducers/UserReducer'
+
 
 const App = ({ store }) => {
   const [username] = useField('text')
   const [password] = useField('password')
-  const [user, setUser] = useState(null)
 
 
   const initBlogsAction = (blogs) => {
-    console.log('INIT', blogs)
-
     return {
       type: 'INIT_BLOGS',
       data: blogs
@@ -23,8 +22,6 @@ const App = ({ store }) => {
   }
 
   const addBlogAction = (blog) => {
-    console.log('ADD', blog)
-
     return {
       type: 'ADD_BLOG',
       data: blog
@@ -49,7 +46,8 @@ const App = ({ store }) => {
     const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser')
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
-      setUser(user)
+      //setUser(user)
+      store.dispatch(setUserAction(user))
       blogService.setToken(user.token)
     }
   }, [])
@@ -89,14 +87,14 @@ const App = ({ store }) => {
 
       window.localStorage.setItem('loggedBlogAppUser', JSON.stringify(user))
       blogService.setToken(user.token)
-      setUser(user)
+      store.dispatch(setUserAction(user))
     } catch (exception) {
       notify('wrong username of password', 'error')
     }
   }
 
   const handleLogout = () => {
-    setUser(null)
+    store.dispatch(removeUserAction())
     blogService.destroyToken()
     window.localStorage.removeItem('loggedBlogAppUser')
   }
@@ -129,7 +127,7 @@ const App = ({ store }) => {
     }
   }
 
-  if (user === null) {
+  if (store.getState().user === null) {
     return (
       <div>
         <h2>log in to application</h2>
@@ -161,7 +159,7 @@ const App = ({ store }) => {
 
       <Notification notification={store.getState().notification} />
 
-      <p>{user.name} logged in</p>
+      <p>{store.getState().user.name} logged in</p>
       <button onClick={handleLogout}>logout</button>
 
       <Togglable buttonLabel='create new' ref={newBlogRef}>
@@ -174,7 +172,7 @@ const App = ({ store }) => {
           blog={blog}
           like={likeBlog}
           remove={removeBlog}
-          user={user}
+          user={store.getState().user}
         />
       )}
     </div>

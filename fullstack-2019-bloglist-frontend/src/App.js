@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react'
-import Blog from './components/Blog'
 import blogService from './services/blogs'
 import loginService from './services/login'
 import NewBlog from './components/NewBlog'
@@ -7,33 +6,14 @@ import Notification from './components/Notification'
 import Togglable from './components/Toggable'
 import { useField } from './hooks'
 import { setUserAction, removeUserAction } from './reducers/UserReducer'
+import { initBlogsAction, addBlogAction } from './reducers/BlogReducer'
+import { newNotificationAction, removeNotificationAction } from './reducers/NotificationReducer'
+import BlogList from './components/BlogList'
 
 
 const App = ({ store }) => {
   const [username] = useField('text')
   const [password] = useField('password')
-
-
-  const initBlogsAction = (blogs) => {
-    return {
-      type: 'INIT_BLOGS',
-      data: blogs
-    }
-  }
-
-  const addBlogAction = (blog) => {
-    return {
-      type: 'ADD_BLOG',
-      data: blog
-    }
-  }
-
-  const likeBlogAction = (blog) => {
-    return {
-      type: 'LIKE_BLOG',
-      data: blog
-    }
-  }
 
 
   useEffect(() => {
@@ -46,33 +26,13 @@ const App = ({ store }) => {
     const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser')
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
-      //setUser(user)
       store.dispatch(setUserAction(user))
       blogService.setToken(user.token)
     }
   }, [])
 
+  // TODO mvoe to notification reducer
   const notify = (message, type = 'success') => {
-
-    const newNotificationAction = (message, type) => {
-      return {
-        type: 'NEW_NOTIFICATION',
-        data: {
-          message,
-          type
-        }
-      }
-    }
-
-    const removeNotificationAction = () => {
-      return {
-        type: 'REMOVE_NOTIFICATION',
-        data: {
-          message: null
-        }
-      }
-    }
-
     store.dispatch(newNotificationAction(message, type))
     setTimeout(() => store.dispatch(removeNotificationAction()), 10000)
   }
@@ -108,25 +68,6 @@ const App = ({ store }) => {
     notify(`a new blog ${addedBlog.title} by ${addedBlog.author} added`)
   }
 
-  const likeBlog = async (blog) => {
-    const likedBlog = { ...blog, likes: blog.likes + 1 }
-    const updatedBlog = await blogService.update(likedBlog)
-    store.dispatch(likeBlogAction(updatedBlog))
-    notify(`blog ${updatedBlog.title} by ${updatedBlog.author} liked!`)
-  }
-
-  const removeBlog = async (blog) => {
-    const title = blog.title
-    const author = blog.author
-    const ok = window.confirm(`remove blog ${title} by ${author}`)
-    if (ok) {
-      await blogService.remove(blog)
-      const blogs = store.getState().blogs
-      store.dispatch(initBlogsAction(blogs.filter(b => b.id !== blog.id)))
-      notify(`blog ${title} by ${author} removed!`)
-    }
-  }
-
   if (store.getState().user === null) {
     return (
       <div>
@@ -151,8 +92,6 @@ const App = ({ store }) => {
 
   const newBlogRef = React.createRef()
 
-  const byLikes = (b1, b2) => b2.likes - b1.likes
-
   return (
     <div>
       <h2>blogs</h2>
@@ -166,15 +105,8 @@ const App = ({ store }) => {
         <NewBlog createBlog={createBlog} />
       </Togglable>
 
-      {store.getState().blogs.sort(byLikes).map(blog =>
-        <Blog
-          key={blog.id}
-          blog={blog}
-          like={likeBlog}
-          remove={removeBlog}
-          user={store.getState().user}
-        />
-      )}
+      <BlogList store={store}/>
+
     </div>
   )
 }

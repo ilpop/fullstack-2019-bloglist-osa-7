@@ -4,6 +4,28 @@ const updateBlog = (updatedBlog, state) => {
 }
 
 
+export const initBlogsAction = (blogs) => {
+  return {
+    type: 'INIT_BLOGS',
+    data: blogs
+  }
+}
+
+export const addBlogAction = (blog) => {
+  return {
+    type: 'ADD_BLOG',
+    data: blog
+  }
+}
+
+export const likeBlogAction = (blog) => {
+  return {
+    type: 'LIKE_BLOG',
+    data: blog
+  }
+}
+
+
 const BlogReducer = (state = [], action) => {
   switch (action.type) {
   case 'INIT_BLOGS':

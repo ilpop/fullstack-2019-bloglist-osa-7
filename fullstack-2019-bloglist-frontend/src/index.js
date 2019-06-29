@@ -5,6 +5,7 @@ import App from './App'
 import notificationReducer from './reducers/NotificationReducer'
 import blogsReducer from './reducers/BlogReducer'
 import userReducer from './reducers/UserReducer'
+import { Provider } from 'react-redux'
 
 
 const reducer = combineReducers({
@@ -15,12 +16,10 @@ const reducer = combineReducers({
 
 const store = createStore(reducer)
 
-const renderApp = () => {
-  ReactDOM.render(
-    <App store={store}/>,
-    document.getElementById('root')
-  )
-}
 
-renderApp()
-store.subscribe(renderApp)
+ReactDOM.render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  document.getElementById('root')
+)

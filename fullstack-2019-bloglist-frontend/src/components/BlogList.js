@@ -3,23 +3,23 @@ import Blog from './Blog'
 import blogService from '../services/blogs'
 import { initBlogsAction, likeBlogAction } from '../reducers/BlogReducer'
 import { newNotificationAction, removeNotificationAction } from '../reducers/NotificationReducer'
+import { connect } from 'react-redux'
 
+const BlogList = (props) => {
 
-const BlogList = ({ store }) => {
-
-  const blogs = store.getState().blogs
+  const blogs = props.blogs
 
   const byLikes = (b1, b2) => b2.likes - b1.likes
 
   const notify = (message, type = 'success') => {
-    store.dispatch(newNotificationAction(message, type))
-    setTimeout(() => store.dispatch(removeNotificationAction()), 10000)
+    props.newNotificationAction(message, type)
+    setTimeout(() => props.removeNotificationAction(), 10000)
   }
 
   const likeBlog = async (blog) => {
     const likedBlog = { ...blog, likes: blog.likes + 1 }
     const updatedBlog = await blogService.update(likedBlog)
-    store.dispatch(likeBlogAction(updatedBlog))
+    props.likeBlogAction(updatedBlog)
     notify(`blog ${updatedBlog.title} by ${updatedBlog.author} liked!`)
   }
 
@@ -29,8 +29,8 @@ const BlogList = ({ store }) => {
     const ok = window.confirm(`remove blog ${title} by ${author}`)
     if (ok) {
       await blogService.remove(blog)
-      const blogs = store.getState().blogs
-      store.dispatch(initBlogsAction(blogs.filter(b => b.id !== blog.id)))
+      const blogs = props.blogs
+      props.initBlogsAction(blogs.filter(b => b.id !== blog.id))
       notify(`blog ${title} by ${author} removed!`)
     }
   }
@@ -44,11 +44,25 @@ const BlogList = ({ store }) => {
           blog={blog}
           like={likeBlog}
           remove={removeBlog}
-          user={store.getState().user}
+          user={props.user}
         />
       )}
     </div>
   )
 }
 
-export default BlogList
+const mapStateToProps = (state) => {
+  return {
+    user: state.user,
+    blogs: state.blogs,
+  }
+}
+
+const mapDispatchToProps = {
+  likeBlogAction,
+  newNotificationAction,
+  removeNotificationAction,
+  initBlogsAction
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(BlogList)
